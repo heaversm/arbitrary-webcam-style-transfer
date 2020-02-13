@@ -1,6 +1,6 @@
 # Realtime Arbitrary Webcam Style Transfer
 
-![Demo of webcam arbitrary style transfer](https://raw.githubusercontent.com/heaversm/arbitrary-webcam-style-transfer/master/src/demo.gif)
+![Demo of webcam arbitrary style transfer](https://raw.githubusercontent.com/heaversm/arbitrary-webcam-style-transfer/master/demo.gif)
 
 ### Rationale
 
