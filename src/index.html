@@ -1,25 +1,123 @@
 <html>
-  <head>
+
+<head>
     <!-- Load @magenta/image -->
     <script src="https://cdn.jsdelivr.net/npm/@magenta/image@^0.2.1"></script>
-  </head>
-  <body>
-    <img id="content" height="256" src="content.jpg"/>
-    <img id="style" height="256" src="style.jpg"/>
-    <canvas id="stylized" height="256"></canvas>
-      <script>
+    <style>
+        .video-container {
+            position: relative;
+            display: none;
+        }
+
+        #webcam-video {
+            position: absolute;
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <input type="file" id="file-select" accept="image/x-png,image/gif,image/jpeg" />
+
+    <div class="output-container">
+        <img id="style" height="256" src="style.jpg" />
+        <canvas id="stylized" height="256"></canvas>
+    </div>
+    <div class="video-container">
+        <img id="content" height="256" src="content.jpg" />
+        <video id="webcam-video" width="341" height="256"></video>
+        <canvas id="hidden-canvas"></canvas>
+    </div>
+
+    <script>
         const model = new mi.ArbitraryStyleTransferNetwork();
         const contentImg = document.getElementById('content');
         const styleImg = document.getElementById('style');
         const stylizedCanvas = document.getElementById('stylized');
+        const hiddenCanvas = document.getElementById('hidden-canvas');
+        const webcamVideoElement = document.getElementById('webcam-video');
+        const fileSelect = document.getElementById('file-select');
 
-        function stylize() {
-          model.stylize(contentImg, styleImg).then((imageData) => {
-            stylizedCanvas.getContext('2d').putImageData(imageData, 0, 0);
-          });
+        let stream, hiddenContext, resultImg;
+        let styleEnabled = false;
+
+        function init() {
+            setupFileSelect();
+            setupCamImage();
         }
 
-        model.initialize().then(stylize);
-      </script>
-  </body>
+        function setupFileSelect() {
+            fileSelect.addEventListener('click',()=>{
+                styleEnabled = false;
+            })
+            fileSelect.onchange = (evt) => {
+                const f = evt.target.files[0];
+                const fileReader = new FileReader();
+                fileReader.onload = ((e) => {
+                    styleImg.src = e.target.result;
+                    styleEnabled = true;
+                });
+                fileReader.readAsDataURL(f);
+            }
+        }
+
+        function setupCamImage() {
+
+            navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+            navigator.getUserMedia(
+                {
+                    video: true
+                },
+                (streamEl) => {
+                    stream = streamEl;
+                    webcamVideoElement.srcObject = streamEl;
+                    webcamVideoElement.play();
+                },
+                (err) => {
+                    console.error(err);
+                }
+            );
+
+
+            hiddenContext = hiddenCanvas.getContext('2d');
+            hiddenCanvas.width = webcamVideoElement.width;
+            hiddenCanvas.height = webcamVideoElement.height;
+
+            styleEnabled = true;
+
+            window.requestAnimationFrame((timestamp) => {
+                draw(timestamp);
+            });
+
+        }
+
+        function draw(timestamp) {
+
+            window.requestAnimationFrame((timestamp) => {
+                this.draw(timestamp);
+            });
+            if (styleEnabled) {
+                styleEnabled = false;
+                stylize();
+            }
+
+        }
+
+        function stylize() {
+            hiddenContext.drawImage(webcamVideoElement, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            const imageDataURL = hiddenCanvas.toDataURL('image/jpg');
+            contentImg.src = imageDataURL;
+            model.stylize(contentImg, styleImg).then((imageData) => {
+                stylizedCanvas.getContext('2d').putImageData(imageData, 0, 0);
+                styleEnabled = true;
+            });
+        }
+
+        model.initialize().then(init);
+    </script>
+
+</body>
+
 </html>
